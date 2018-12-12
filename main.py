@@ -37,8 +37,12 @@ Z_dim = 128
 #number of updates to discriminator for every update to generator 
 disc_iters = 5
 
-discriminator = model.Discriminator().cuda()
-generator = model.Generator(Z_dim).cuda()
+if args.model == 'resnet':
+    discriminator = model_resnet.Discriminator().cuda()
+    generator = model_resnet.Generator(Z_dim).cuda()
+else:
+    discriminator = model.Discriminator().cuda()
+    generator = model.Generator(Z_dim).cuda()
 
 # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
 # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
