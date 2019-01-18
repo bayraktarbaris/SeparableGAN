@@ -7,6 +7,17 @@ channels = 3
 leak = 0.1
 w_g = 4
 
+class Interpolate(nn.Module):
+    def __init__(self, size, mode):
+        super(Interpolate, self).__init__()
+        self.interp = nn.functional.interpolate
+        self.size = size
+        self.mode = 'bilinear'
+        
+    def forward(self, x):
+        x = self.interp(x, size=self.size, mode=self.mode, align_corners=False)
+        return x
+
 class Generator(nn.Module):
     def __init__(self, z_dim):
         super(Generator, self).__init__()
@@ -30,6 +41,35 @@ class Generator(nn.Module):
 
     def forward(self, z):
         return self.model(z.view(-1, self.z_dim, 1, 1))
+
+class Generator2(nn.Module):
+    def __init__(self, z_dim):
+        super(Generator, self).__init__()
+        self.z_dim = z_dim
+
+        self.model = nn.Sequential(
+            Interpolate(size=(4,4), mode='bilinear')
+            nn.Conv2d(z_dim,512,3,stride=1,padding=(1,1)) # Output is of size (batchNum,512,4,4)
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            Interpolate(size=(8,8), mode='bilinear'),
+            nn.Conv2d(512,256,3,stride=1,padding=(1,1)) # Output is of size (batchNum,256,8,8)
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            Interpolate(size=(16,16), mode='bilinear'),
+            nn.Conv2d(256,128,3,stride=1,padding=(1,1)) # Output is of size (batchNum,128,16,16)
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            Interpolate(size=(32,32), mode =('bilinear')),
+            nn.Conv2d(128,64,3,stride=1,padding=(1,1)) # Output is of size (batchNum,64,32,32)
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            nn.Conv2d(64,channels,3,stride=1, padding=(1,1)), # Output is of size (batchNum,3,32,32)
+            nn.Tanh())
+
+    def forward(self, z):
+        return self.model(z.view(-1, self.z_dim, 1, 1))
+
 
 class Discriminator(nn.Module):
     def __init__(self):
