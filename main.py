@@ -7,17 +7,17 @@ from torch.optim.lr_scheduler import ExponentialLR
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 import model
-from inception_score import inception_score
+from incep_score_tf import inception_score, Inception
 import numpy as np
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
-
-
+from chainer import serializers
+import chainer
 parser = argparse.ArgumentParser()
-parser.add_argument('--batch_size', type=int, default=64)
+parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--lr', type=float, default=2e-4)
 parser.add_argument('--loss', type=str, default='hinge')
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoints')
@@ -117,12 +117,22 @@ def load_pretrained(model_type, cuda_avail):
 
     return generator, discriminator        
 
-os.makedirs(args.checkpoint_dir, exist_ok=True)
-fixed_z = Variable(torch.randn(50000, Z_dim))
+#os.makedirs(args.checkpoint_dir)# Do not forget ==> Python 2 has no argument exist_ok
+fixed_z = Variable(torch.randn(50000, Z_dim)).cuda()
+samples = np.zeros((50000,3,32,32), dtype = np.float32)
 if args.pretrained == "True":
-    generator, _ = load_pretrained(args.model, args.cuda_avail)
-    samples = generator(fixed_z).cpu().data.numpy()
-    print("Calculating inception_score ... mean %s, deviation %s"%(inception_score(samples, cuda = False if args.cuda_avail == "False" else True, batch_size = args.batch_size // 4, resize = True, splits = 10)))                
+    #generator, _ = load_pretrained(args.model, args.cuda_avail)
+    #generator.eval()
+    #for i in range(500):
+        #samples[i*100:(i+1)*100]  = generator(fixed_z[i*100:(i+1)*100]).cpu().data.numpy()
+    samples = np.load("generated.npy")
+    samples = np.array(((samples + 1) * 255/2.0).astype("uint8"), dtype=np.float32) # Conversion is important Scale between 0 and 255
+    model = Inception()
+    serializers.load_hdf5("model/inception_score.model",model)
+    model.to_gpu()
+    print ("Calculating Inception Score...")
+    #print("inception score mean %s, std %s"%(inception_score(model, np.array(cifar.train_data, dtype = np.float32).reshape((50000,3,32,32)))))
+    print("inception score mean %s, std %s"%(inception_score(model,samples,batch_size = 200 )))
 
 else:   # Here we assume cuda is a must for training 
     loader = torch.utils.data.DataLoader(

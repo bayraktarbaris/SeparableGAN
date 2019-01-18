@@ -48,20 +48,18 @@ def inception_score(imgs, cuda=True, batch_size=32, resize=False, splits=1):
 
     # Now compute the mean kl-div
     split_scores = []
-
+    scores = np.empty((splits), dtype = np.float32)
     for k in range(splits):
         part = preds[k * (N // splits): (k+1) * (N // splits), :]
-        py = np.mean(part, axis=0)
-        scores = []
-        for i in range(part.shape[0]):
-            pyx = part[i, :]
-            scores.append(entropy(pyx, py))
-        split_scores.append(np.exp(np.mean(scores)))
+        kl = part * (np.log(part) -
+                     np.log(np.expand_dims(np.mean(part, 0), 0)))
+        kl = np.mean(np.sum(kl, 1))
+        scores[k] = np.exp(kl)
 
-    return np.mean(split_scores), np.std(split_scores)
+    return np.mean(scores), np.std(scores)
 
 
-"""
+
 ##################################################################################################################
 #########################   This is used for testing inception score on original Cifar10 images     ##############
 ##################################################################################################################
@@ -85,7 +83,7 @@ if __name__ == '__main__':
     import torchvision.datasets as dset
     import torchvision.transforms as transforms
 
-    cifar = dset.CIFAR10(root='data/', download=False,
+    cifar = dset.CIFAR10(root='/slow_data/datasets/cifar-10-python', download=False,
                              transform=transforms.Compose([
                                  transforms.Scale(32),
                                  transforms.ToTensor(),
@@ -97,5 +95,4 @@ if __name__ == '__main__':
 
     print ("Calculating Inception Score...")
     print("cifar.size = ", IgnoreLabelDataset(cifar).__getNumberOfItems__(500).size())
-print (inception_score((cifar).__getNumberOfItems__(500), cuda=False, batch_size=32, resize=True, splits=10))
-"""
+print (inception_score(IgnoreLabelDataset(cifar), cuda=True, batch_size=80, resize=True, splits=10))
