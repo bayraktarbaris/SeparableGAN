@@ -44,24 +44,24 @@ class Generator(nn.Module):
 
 class Generator2(nn.Module):
     def __init__(self, z_dim):
-        super(Generator, self).__init__()
+        super(Generator2, self).__init__()
         self.z_dim = z_dim
 
         self.model = nn.Sequential(
-            Interpolate(size=(4,4), mode='bilinear')
-            nn.Conv2d(z_dim,512,3,stride=1,padding=(1,1)) # Output is of size (batchNum,512,4,4)
+            Interpolate(size=(4,4), mode='bilinear'),
+            nn.Conv2d(z_dim,512,3,stride=1,padding=(1,1)), # Output is of size (batchNum,512,4,4)
             nn.BatchNorm2d(512),
             nn.ReLU(),
             Interpolate(size=(8,8), mode='bilinear'),
-            nn.Conv2d(512,256,3,stride=1,padding=(1,1)) # Output is of size (batchNum,256,8,8)
+            nn.Conv2d(512,256,3,stride=1,padding=(1,1)), # Output is of size (batchNum,256,8,8)
             nn.BatchNorm2d(256),
             nn.ReLU(),
             Interpolate(size=(16,16), mode='bilinear'),
-            nn.Conv2d(256,128,3,stride=1,padding=(1,1)) # Output is of size (batchNum,128,16,16)
+            nn.Conv2d(256,128,3,stride=1,padding=(1,1)), # Output is of size (batchNum,128,16,16)
             nn.BatchNorm2d(128),
             nn.ReLU(),
             Interpolate(size=(32,32), mode =('bilinear')),
-            nn.Conv2d(128,64,3,stride=1,padding=(1,1)) # Output is of size (batchNum,64,32,32)
+            nn.Conv2d(128,64,3,stride=1,padding=(1,1)), # Output is of size (batchNum,64,32,32)
             nn.BatchNorm2d(64),
             nn.ReLU(),
             nn.Conv2d(64,channels,3,stride=1, padding=(1,1)), # Output is of size (batchNum,3,32,32)

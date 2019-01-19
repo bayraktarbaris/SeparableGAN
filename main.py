@@ -29,6 +29,7 @@ parser.add_argument('--experimentNo', type=int, default= 0) # For different tuni
 parser.add_argument('--disc_iters', type=int, default = 5) # This was the initial setup we trained this value should be cross validated
 args = parser.parse_args()
 Z_dim = 128
+fixed_z = Variable(torch.randn(50000, Z_dim)).cuda()
 
 def train(epoch):
     bestInceptionScore = 0
@@ -64,9 +65,15 @@ def train(epoch):
         gen_loss.backward()
         optim_gen.step()
 
-        if batch_idx % 10 == 0:
-            print('disc loss', disc_loss.data[0], 'gen loss', gen_loss.data[0]) # Show the loss for each 10 epoch
-            incepScore = inceptionScore(generator, fixed_z, inceptionModel) # Calculate the inception score for each 10 epochs
+        if batch_idx % 100 == 0:
+            print('disc loss', disc_loss.data[0], 'gen loss', gen_loss.data[0]) # Show the loss for each 100 iteration
+        if batch_idx % 200 == 0:
+            inceptionModel = Inception()
+            serializers.load_hdf5("model/inception_score.model",inceptionModel)
+            inceptionModel.to_gpu()
+            generator.eval()
+            incepScore = inceptionScore(generator, inceptionModel) # Calculate the inception score for each 10 epochs
+            generator.train()
             if incepScore > bestInceptionScore: # Save the models as best generator and discriminator
                 bestInceptionScore = incepScore
                 torch.save(discriminator.state_dict(), os.path.join(args.checkpoint_dir, 'disc_{}'.format('best' + str(args.experimentNo)))) # Distinguish the experiments
@@ -126,23 +133,21 @@ def load_pretrained(model_type, cuda_avail):
     print("The generator that has been loaded is %s"%generator)
     return generator, discriminator        
 
-def inceptionScore(generator, fixed_z, inceptionModel):
+def inceptionScore(generator, inceptionModel):
     # This function assumed to be run during training to check the improvement in terms of InceptionScore
     # Therefore it directly assumes cuda is available during training
     batchSize = 100
     totalTrainingSamples = 50000 # By default Cifar-10
     samples = np.zeros((totalTrainingSamples,3,32,32), dtype = np.float32)
     for i in range(totalTrainingSamples // batchSize): #Get the predictions batch by batch
-        samples[i*batchSize:(i+1)*batchSize] = generator(fixed_z[i*batchSize:(i+1)*batchSize].cpu().data.numpy())
+        samples[i*batchSize:(i+1)*batchSize] = generator(fixed_z[i*batchSize:(i+1)*batchSize]).cpu().detach().numpy()
     samples = np.array(((samples + 1) * 255/2.0).astype("uint8"), dtype=np.float32) # Conversion is important Scale between 0 and 255 generator last layer tanh()
     inceptionModel.to_gpu()
     print ("Calculating Inception Score...")
-    mean, std = inception_score(model,samples,batch_size = 200 )
+    mean, std = inception_score(inceptionModel,samples,batch_size = 200 )
     print("inception score mean %s, std %s"%(mean, std))
     return mean
 #os.makedirs(args.checkpoint_dir)# Do not forget ==> Python 2 has no argument exist_ok
-
-global fixed_z = Variable(torch.randn(50000, Z_dim).cuda())
 
 #In order to just evaluate an experiment with given experimentNo set --pretrained=True
 if args.pretrained == "True":
@@ -173,7 +178,7 @@ else:   # Here we assume cuda is a must for training
         generator = model_resnet.Generator(Z_dim).cuda()
     else:
         discriminator = model.Discriminator().cuda()
-        generator = model.Generator(Z_dim).cuda()
+        generator = model.Generator2(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
@@ -183,10 +188,10 @@ else:   # Here we assume cuda is a must for training
     # use an exponentially decaying learning rate
     scheduler_d = optim.lr_scheduler.ExponentialLR(optim_disc, gamma=0.99)
     scheduler_g = optim.lr_scheduler.ExponentialLR(optim_gen, gamma=0.99)
-    print("The genetor currently trained is %"%generator)
+    print("The generator currently trained is %s"%generator)
     print("Current loss that is used is %s"%args.loss)
     print("Initial learning rate is %s"%args.lr)
-    print("Number of times discriminator to be trained per generator training is %s",%args.disc_iters)
+    print("Number of times discriminator to be trained per generator training is %s"%args.disc_iters)
     print("All the models successfully loaded, Starting training... This will take a while")
     for epoch in range(2000):
         print("Training epoch %s"%epoch)
