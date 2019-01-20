@@ -16,6 +16,7 @@ import matplotlib.gridspec as gridspec
 import os
 from chainer import serializers
 import chainer
+import alternativeModels
 parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--lr', type=float, default=2e-4)
@@ -67,7 +68,7 @@ def train(epoch):
 
         if batch_idx % 100 == 0:
             print('disc loss', disc_loss.data[0], 'gen loss', gen_loss.data[0]) # Show the loss for each 100 iteration
-        if batch_idx % 200 == 0:
+        if batch_idx % 400 == 0:
             inceptionModel = Inception()
             serializers.load_hdf5("model/inception_score.model",inceptionModel)
             inceptionModel.to_gpu()
@@ -178,7 +179,7 @@ else:   # Here we assume cuda is a must for training
         generator = model_resnet.Generator(Z_dim).cuda()
     else:
         discriminator = model.Discriminator().cuda()
-        generator = model.Generator2(Z_dim).cuda()
+        generator = alternativeModels.Generator3(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
