@@ -68,7 +68,7 @@ def train(epoch):
 
         if batch_idx % 100 == 0:
             print('disc loss', disc_loss.data[0], 'gen loss', gen_loss.data[0]) # Show the loss for each 100 iteration
-        if batch_idx % 400 == 0:
+        if batch_idx % 1000 == 0:
             inceptionModel = Inception()
             serializers.load_hdf5("model/inception_score.model",inceptionModel)
             inceptionModel.to_gpu()
@@ -122,12 +122,12 @@ def load_pretrained(model_type, cuda_avail):
     else:
         if args.cuda_avail == "True":
             discriminator = model.Discriminator().cuda()
-            generator = model.Generator(Z_dim).cuda()
+            generator = model.Generator2(Z_dim).cuda()
             discriminator.load_state_dict(torch.load(args.checkpoint_dir + '/disc_best' + str(args.experimentNo)))
             generator.load_state_dict(torch.load(args.checkpoint_dir + '/gen_best' + str(args.experimentNo)))
         else:
             discriminator = model.Discriminator()
-            generator = model.Generator(Z_dim)
+            generator = model.Generator2(Z_dim)
             discriminator.load_state_dict(torch.load(args.checkpoint_dir + '/disc_best' + str(args.experimentNo), map_location=lambda storage, loc: storage))
             generator.load_state_dict(torch.load(args.checkpoint_dir + '/gen_best' + str(args.experimentNo), map_location=lambda storage, loc: storage))
     
@@ -179,7 +179,7 @@ else:   # Here we assume cuda is a must for training
         generator = model_resnet.Generator(Z_dim).cuda()
     else:
         discriminator = model.Discriminator().cuda()
-        generator = alternativeModels.Generator3(Z_dim).cuda()
+        generator = alternativeModels.Generator5(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
@@ -194,6 +194,7 @@ else:   # Here we assume cuda is a must for training
     print("Initial learning rate is %s"%args.lr)
     print("Number of times discriminator to be trained per generator training is %s"%args.disc_iters)
     print("All the models successfully loaded, Starting training... This will take a while")
+    
     for epoch in range(2000):
         print("Training epoch %s"%epoch)
         train(epoch)
