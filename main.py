@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--lr', type=float, default=2e-4)
 parser.add_argument('--loss', type=str, default='hinge')
-parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/resizeConv') # Explicitly say which experiment you are performing
+parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/seperableConv') # Explicitly say which experiment you are performing
 
 parser.add_argument('--model', type=str, default='dcgan')
 parser.add_argument('--pretrained', type=str, default="False")
@@ -179,7 +179,7 @@ else:   # Here we assume cuda is a must for training
         generator = model_resnet.Generator(Z_dim).cuda()
     else:
         discriminator = model.Discriminator().cuda()
-        generator = alternativeModels.Generator5(Z_dim).cuda()
+        generator = model.SeperableGenerator(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients

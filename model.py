@@ -70,6 +70,41 @@ class Generator2(nn.Module):
     def forward(self, z):
         return self.model(z.view(-1, self.z_dim, 1, 1))
 
+class SeperableConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(SeperableConvBlock, self).__init__()
+        self.depthwise = nn.Conv2d(in_channels, in_channels, 3, stride = 1, padding=(1,1), groups = in_channels) # Each input channel is convolved seperately
+        self.pointwise = nn.Conv2d(in_channels, out_channels, 1, stride = 1) # Normal convolution with 1*1*in_channels kernels
+    def forward(self, x):
+        return self.pointwise(self.depthwise(x))
+
+class SeperableGenerator(nn.Module):
+    def __init__(self, z_dim):
+        super(SeperableGenerator, self).__init__()
+        self.z_dim = z_dim
+
+        self.model = nn.Sequential(
+            Interpolate(size=(4,4), mode='bilinear'),
+            SeperableConvBlock(z_dim, 512), # Output is of size (batchNum,512,4,4)
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            Interpolate(size=(8,8), mode='bilinear'),
+            SeperableConvBlock(512,256), # Output is of size (batchNum,256,8,8)
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            Interpolate(size=(16,16), mode='bilinear'),
+            SeperableConvBlock(256,128), # Output is of size (batchNum,128,16,16)
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            Interpolate(size=(32,32), mode =('bilinear')),
+            SeperableConvBlock(128,64), # Output is of size (batchNum,64,32,32)
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            SeperableConvBlock(64,3), # Output is of size (batchNum,3,32,32)
+            nn.Tanh())
+
+    def forward(self, z):
+        return self.model(z.view(-1, self.z_dim, 1, 1))
 
 class Discriminator(nn.Module):
     def __init__(self):
