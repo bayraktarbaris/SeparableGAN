@@ -161,3 +161,51 @@ class Discriminator(nn.Module):
         m = nn.LeakyReLU(leak)(self.conv7(m))
 
         return self.fc(m.view(-1,w_g * w_g * 512))
+
+class SeperableSpectralNormalizedConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel, stride):
+        super(SeperableSpectralNormalizedConvBlock, self).__init__()
+        self.kernelSize = kernel
+        self.stride = stride
+        self.depthwise = SpectralNorm(nn.Conv2d(in_channels, in_channels, self.kernelSize, stride = self.stride, padding=(1,1), groups = in_channels)) # Apply Spectral Norm and each input channel is convolved seperately
+        self.pointwise = SpectralNorm(nn.Conv2d(in_channels, out_channels, 1, stride = 1)) # Apply SpectralNorm and convolution with 1*1*in_channels kernels
+    def forward(self, x):
+        return self.pointwise(self.depthwise(x))
+
+
+class SeperableDiscriminator(nn.Module):
+    def __init__(self):
+        super(SeperableDiscriminator, self).__init__()
+
+        self.conv1 = SeperableSpectralNormalizedConvBlock(channels, 64, 3, stride = 1)
+
+        self.conv2 = SeperableSpectralNormalizedConvBlock(64, 64, 4, stride=2)
+        self.conv3 = SeperableSpectralNormalizedConvBlock(64, 128, 3, stride=1)
+        self.conv4 = SeperableSpectralNormalizedConvBlock(128, 128, 4, stride=2)
+        self.conv5 = SeperableSpectralNormalizedConvBlock(128, 256, 3, stride=1)
+        self.conv6 = SeperableSpectralNormalizedConvBlock(256, 256, 4, stride=2)
+        self.conv7 = SeperableSpectralNormalizedConvBlock(256, 512, 3, stride=1)
+
+
+        self.fc = SpectralNorm(nn.Linear(w_g * w_g * 512, 1))
+
+    def forward(self, x):
+        m = x
+        m = nn.LeakyReLU(leak)(self.conv1(m))
+        m = nn.LeakyReLU(leak)(self.conv2(m))
+        m = nn.LeakyReLU(leak)(self.conv3(m))
+        m = nn.LeakyReLU(leak)(self.conv4(m))
+        m = nn.LeakyReLU(leak)(self.conv5(m))
+        m = nn.LeakyReLU(leak)(self.conv6(m))
+        m = nn.LeakyReLU(leak)(self.conv7(m))
+
+        return self.fc(m.view(-1,w_g * w_g * 512))
+
+'''
+model = SeperableGenerator2(128)
+print("model that has been used is = ", model)
+pytorch_total_params = sum(p.numel() for p in model.parameters())
+print("Total params = ", pytorch_total_params)
+pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print("Total trainable params = ", pytorch_total_params)
+'''
