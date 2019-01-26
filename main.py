@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--lr', type=float, default=2e-4)
 parser.add_argument('--loss', type=str, default='hinge')
-parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/seperableConv') # Explicitly say which experiment you are performing
+parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/Discriminator') # Explicitly say which experiment you are performing
 
 parser.add_argument('--model', type=str, default='dcgan')
 parser.add_argument('--pretrained', type=str, default="False")
@@ -178,8 +178,8 @@ else:   # Here we assume cuda is a must for training
         discriminator = model_resnet.Discriminator().cuda()
         generator = model_resnet.Generator(Z_dim).cuda()
     else:
-        discriminator = model.Discriminator().cuda()
-        generator = model.SeperableGenerator2(Z_dim).cuda()
+        discriminator = model.SeperableDiscriminator().cuda()
+        generator = model.Generator(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
@@ -190,6 +190,7 @@ else:   # Here we assume cuda is a must for training
     scheduler_d = optim.lr_scheduler.ExponentialLR(optim_disc, gamma=0.99)
     scheduler_g = optim.lr_scheduler.ExponentialLR(optim_gen, gamma=0.99)
     print("The generator currently trained is %s"%generator)
+    print("The discriminator currently trained is %s"%discriminator)
     print("Current loss that is used is %s"%args.loss)
     print("Initial learning rate is %s"%args.lr)
     print("Number of times discriminator to be trained per generator training is %s"%args.disc_iters)
