@@ -177,17 +177,18 @@ class SeperableDiscriminator(nn.Module):
     def __init__(self):
         super(SeperableDiscriminator, self).__init__()
 
-        self.conv1 = SeperableSpectralNormalizedConvBlock(channels, 64, 3, stride = 1)
+        self.conv1 = SeperableSpectralNormalizedConvBlock(channels, 128, 3, stride = 2)
 
-        self.conv2 = SeperableSpectralNormalizedConvBlock(64, 64, 4, stride=2)
-        self.conv3 = SeperableSpectralNormalizedConvBlock(64, 128, 3, stride=1)
-        self.conv4 = SeperableSpectralNormalizedConvBlock(128, 128, 4, stride=2)
-        self.conv5 = SeperableSpectralNormalizedConvBlock(128, 256, 3, stride=1)
-        self.conv6 = SeperableSpectralNormalizedConvBlock(256, 256, 4, stride=2)
-        self.conv7 = SeperableSpectralNormalizedConvBlock(256, 512, 3, stride=1)
+        self.conv2 = SeperableSpectralNormalizedConvBlock(128, 192, 3, stride=2)
+        self.conv3 = SeperableSpectralNormalizedConvBlock(192, 256, 3, stride=2)
+        self.conv4 = SeperableSpectralNormalizedConvBlock(256, 256, 3, stride=1)
+        self.conv5 = SeperableSpectralNormalizedConvBlock(256, 512, 3, stride=2)
+        self.conv6 = SeperableSpectralNormalizedConvBlock(512, 512, 3, stride=1)
+        self.conv7 = SeperableSpectralNormalizedConvBlock(512, 1024, 3, stride=2)
 
 
-        self.fc = SpectralNorm(nn.Linear(w_g * w_g * 512, 1))
+        self.fc1 = SpectralNorm(nn.Linear(1024, 50))
+        self.fc2 = SpectralNorm(nn.Linear(50,1))
 
     def forward(self, x):
         m = x
@@ -199,10 +200,10 @@ class SeperableDiscriminator(nn.Module):
         m = nn.LeakyReLU(leak)(self.conv6(m))
         m = nn.LeakyReLU(leak)(self.conv7(m))
 
-        return self.fc(m.view(-1,w_g * w_g * 512))
+        return self.fc2(self.fc1(m.view(-1,1024)).view(-1,50))
 
 '''
-model = SeperableGenerator2(128)
+model = SeperableDiscriminator()
 print("model that has been used is = ", model)
 pytorch_total_params = sum(p.numel() for p in model.parameters())
 print("Total params = ", pytorch_total_params)
