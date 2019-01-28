@@ -7,6 +7,7 @@ from torch.optim.lr_scheduler import ExponentialLR
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 import model
+import model_resnet
 from incep_score_tf import inception_score, Inception
 import numpy as np
 import matplotlib
