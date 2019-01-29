@@ -7,6 +7,7 @@ from torch.optim.lr_scheduler import ExponentialLR
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 import model
+import model_resnet
 from incep_score_tf import inception_score, Inception
 import numpy as np
 import matplotlib
@@ -178,8 +179,8 @@ else:   # Here we assume cuda is a must for training
         discriminator = model_resnet.Discriminator().cuda()
         generator = model_resnet.Generator(Z_dim).cuda()
     else:
-        discriminator = model.SeperableDiscriminator().cuda()
-        generator = model.Generator(Z_dim).cuda()
+        discriminator = model_resnet.Discriminator().cuda()
+        generator = model.SeperableSpectralNormalizedGenerator(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
