@@ -102,10 +102,10 @@ class FirstResBlockDiscriminator(nn.Module):
         return self.model(x) + self.bypass(x)
 
 class SeparableConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, bias, stride, padding):
+    def __init__(self, in_channels, out_channels, kernel_size, stride, padding):
         super(SeparableConvBlock, self).__init__()
-        self.depthwise = nn.Conv2d(in_channels, in_channels, 3, stride = 1, padding=(1,1), groups = in_channels) # Each input channel is convolved separately
-        self.pointwise = nn.Conv2d(in_channels, out_channels, 1, stride = 1) # Normal convolution with 1*1*in_channels kernels
+        self.depthwise = nn.Conv2d(in_channels, in_channels, kernel_size, stride = stride, padding=padding, groups = in_channels) # Each input channel is convolved separately
+        self.pointwise = nn.Conv2d(in_channels, out_channels, kernel_size, stride = stride) # Normal convolution with 1*1*in_channels kernels
     def forward(self, x):
         return self.pointwise(self.depthwise(x))
 
