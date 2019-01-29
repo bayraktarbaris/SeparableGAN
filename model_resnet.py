@@ -144,3 +144,11 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.fc(self.model(x).view(-1,DISC_SIZE))
+'''
+model = Generator(128)
+print("model that has been used is = ", model)
+pytorch_total_params = sum(p.numel() for p in model.parameters())
+print("Total params = ", pytorch_total_params)
+pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+print("Total trainable params = ", pytorch_total_params)
+'''
