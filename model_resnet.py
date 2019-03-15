@@ -286,9 +286,9 @@ class SeparableDiscriminator(nn.Module):
         super(SeparableDiscriminator, self).__init__()
 
         self.model = nn.Sequential(
-                SeparableFirstResBlockDiscriminator(channels, DISC_SIZE, stride=2),
-                SeparableResBlockDiscriminator(DISC_SIZE, DISC_SIZE, stride=2),
-                SeparableResBlockDiscriminator(DISC_SIZE, DISC_SIZE),
+                FirstResBlockDiscriminator(channels, DISC_SIZE, stride=2),
+                ResBlockDiscriminator(DISC_SIZE, DISC_SIZE, stride=2),
+                ResBlockDiscriminator(DISC_SIZE, DISC_SIZE),
                 SeparableResBlockDiscriminator(DISC_SIZE, DISC_SIZE),
                 nn.ReLU(),
                 nn.AvgPool2d(8),

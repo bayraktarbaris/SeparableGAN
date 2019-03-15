@@ -172,23 +172,33 @@ class SeperableSpectralNormalizedConvBlock(nn.Module):
     def forward(self, x):
         return self.pointwise(self.depthwise(x))
 
+class SeperableConvBlock2(nn.Module):
+    def __init__(self, in_channels, out_channels, kernel, stride):
+        super(SeperableConvBlock2, self).__init__()
+        self.kernelSize = kernel
+        self.stride = stride
+        self.depthwise = nn.Conv2d(in_channels, in_channels, self.kernelSize, stride = self.stride, padding=(1,1), groups = in_channels) # Apply Spectral Norm and each input channel is convolved seperately
+        self.pointwise = nn.Conv2d(in_channels, out_channels, 1, stride = 1) # Apply SpectralNorm and convolution with 1*1*in_channels kernels
+    def forward(self, x):
+        return self.pointwise(self.depthwise(x))
+
 
 class SeperableDiscriminator(nn.Module):
     def __init__(self):
         super(SeperableDiscriminator, self).__init__()
 
-        self.conv1 = SeperableSpectralNormalizedConvBlock(channels, 128, 3, stride = 2)
+        self.conv1 = SeperableConvBlock2(channels, 128, 3, stride = 2)
 
-        self.conv2 = SeperableSpectralNormalizedConvBlock(128, 192, 3, stride=2)
-        self.conv3 = SeperableSpectralNormalizedConvBlock(192, 256, 3, stride=2)
-        self.conv4 = SeperableSpectralNormalizedConvBlock(256, 256, 3, stride=1)
-        self.conv5 = SeperableSpectralNormalizedConvBlock(256, 512, 3, stride=2)
-        self.conv6 = SeperableSpectralNormalizedConvBlock(512, 512, 3, stride=1)
-        self.conv7 = SeperableSpectralNormalizedConvBlock(512, 1024, 3, stride=2)
+        self.conv2 = SeperableConvBlock2(128, 192, 3, stride=2)
+        self.conv3 = SeperableConvBlock2(192, 256, 3, stride=2)
+        self.conv4 = SeperableConvBlock2(256, 256, 3, stride=1)
+        self.conv5 = SeperableConvBlock2(256, 512, 3, stride=2)
+        self.conv6 = SeperableConvBlock2(512, 512, 3, stride=1)
+        self.conv7 = SeperableConvBlock2(512, 1024, 3, stride=2)
 
 
-        self.fc1 = SpectralNorm(nn.Linear(1024, 50))
-        self.fc2 = SpectralNorm(nn.Linear(50,1))
+        self.fc1 = nn.Linear(1024, 50)
+        self.fc2 = nn.Linear(50,1)
 
     def forward(self, x):
         m = x
