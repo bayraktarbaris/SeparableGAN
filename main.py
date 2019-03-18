@@ -200,7 +200,7 @@ else:  # Here we assume cuda is a must for training
         generator = model_resnet.Generator(Z_dim)
     else:
         discriminator = model_resnet.Discriminator()
-        generator = model.SeperableGenerator2(Z_dim)
+        generator = model.SeparableGenerator2(Z_dim)
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients

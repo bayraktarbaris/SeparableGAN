@@ -20,7 +20,7 @@ import chainer
 import alternativeModels
 parser = argparse.ArgumentParser()
 parser.add_argument('--loss', type=str, default='hinge')
-parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/seperableConv') # Explicitly say which experiment you are performing
+parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/separableConv') # Explicitly say which experiment you are performing
 
 parser.add_argument('--model', type=str, default='dcgan')
 parser.add_argument('--cuda_avail', type=str, default='True')
@@ -47,12 +47,12 @@ def load_pretrained(model_type, cuda_avail):
     else:
         if args.cuda_avail == "True":
             discriminator = model.Discriminator().cuda()
-            generator = model.SeperableGenerator2(Z_dim).cuda()
+            generator = model.SeparableGenerator2(Z_dim).cuda()
             discriminator.load_state_dict(torch.load(args.checkpoint_dir + '/disc_best' + str(args.experimentNo)))
             generator.load_state_dict(torch.load(args.checkpoint_dir + '/gen_best' + str(args.experimentNo)))
         else:
             discriminator = model.Discriminator()
-            generator = model.SeperableGenerator2(Z_dim)
+            generator = model.SeparableGenerator2(Z_dim)
             discriminator.load_state_dict(torch.load(args.checkpoint_dir + '/disc_best' + str(args.experimentNo), map_location=lambda storage, loc: storage))
             generator.load_state_dict(torch.load(args.checkpoint_dir + '/gen_best' + str(args.experimentNo), map_location=lambda storage, loc: storage))
 

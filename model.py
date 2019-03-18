@@ -74,11 +74,11 @@ class Generator2(nn.Module):
         return self.model(z.view(-1, self.z_dim, 1, 1))
 
 
-class SeperableConvBlock(nn.Module):
+class SeparableConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels):
-        super(SeperableConvBlock, self).__init__()
+        super(SeparableConvBlock, self).__init__()
         self.depthwise = nn.Conv2d(in_channels, in_channels, 3, stride=1, padding=(1, 1),
-                                   groups=in_channels)  # Each input channel is convolved seperately
+                                   groups=in_channels)  # Each input channel is convolved Separately
         self.pointwise = nn.Conv2d(in_channels, out_channels, 1,
                                    stride=1)  # Normal convolution with 1*1*in_channels kernels
 
@@ -86,58 +86,58 @@ class SeperableConvBlock(nn.Module):
         return self.pointwise(self.depthwise(x))
 
 
-class SeperableGenerator(nn.Module):
+class SeparableGenerator(nn.Module):
     def __init__(self, z_dim):
-        super(SeperableGenerator, self).__init__()
+        super(SeparableGenerator, self).__init__()
         self.z_dim = z_dim
 
         self.model = nn.Sequential(
             Interpolate(size=(4, 4), mode='bilinear'),
-            SeperableConvBlock(z_dim, 512),  # Output is of size (batchNum,512,4,4)
+            SeparableConvBlock(z_dim, 512),  # Output is of size (batchNum,512,4,4)
             nn.BatchNorm2d(512),
             nn.ReLU(),
             Interpolate(size=(8, 8), mode='bilinear'),
-            SeperableConvBlock(512, 256),  # Output is of size (batchNum,256,8,8)
+            SeparableConvBlock(512, 256),  # Output is of size (batchNum,256,8,8)
             nn.BatchNorm2d(256),
             nn.ReLU(),
             Interpolate(size=(16, 16), mode='bilinear'),
-            SeperableConvBlock(256, 128),  # Output is of size (batchNum,128,16,16)
+            SeparableConvBlock(256, 128),  # Output is of size (batchNum,128,16,16)
             nn.BatchNorm2d(128),
             nn.ReLU(),
             Interpolate(size=(32, 32), mode=('bilinear')),
-            SeperableConvBlock(128, 64),  # Output is of size (batchNum,64,32,32)
+            SeparableConvBlock(128, 64),  # Output is of size (batchNum,64,32,32)
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            SeperableConvBlock(64, 3),  # Output is of size (batchNum,3,32,32)
+            SeparableConvBlock(64, 3),  # Output is of size (batchNum,3,32,32)
             nn.Tanh())
 
     def forward(self, z):
         return self.model(z.view(-1, self.z_dim, 1, 1))
 
 
-class SeperableGenerator2(nn.Module):
+class SeparableGenerator2(nn.Module):
     def __init__(self, z_dim):
-        super(SeperableGenerator2, self).__init__()
+        super(SeparableGenerator2, self).__init__()
         self.z_dim = z_dim
         self.dense = nn.Linear(self.z_dim, self.z_dim * 4 * 4)  # Upsample first layer with fc layer
 
         self.model = nn.Sequential(
-            SeperableConvBlock(z_dim, 512),  # Output is of size (batchNum,512,4,4)
+            SeparableConvBlock(z_dim, 512),  # Output is of size (batchNum,512,4,4)
             nn.BatchNorm2d(512),
             nn.ReLU(),
             Interpolate(size=(8, 8), mode='bilinear'),
-            SeperableConvBlock(512, 256),  # Output is of size (batchNum,256,8,8)
+            SeparableConvBlock(512, 256),  # Output is of size (batchNum,256,8,8)
             nn.BatchNorm2d(256),
             nn.ReLU(),
             Interpolate(size=(16, 16), mode='bilinear'),
-            SeperableConvBlock(256, 128),  # Output is of size (batchNum,128,16,16)
+            SeparableConvBlock(256, 128),  # Output is of size (batchNum,128,16,16)
             nn.BatchNorm2d(128),
             nn.ReLU(),
             Interpolate(size=(32, 32), mode=('bilinear')),
-            SeperableConvBlock(128, 64),  # Output is of size (batchNum,64,32,32)
+            SeparableConvBlock(128, 64),  # Output is of size (batchNum,64,32,32)
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            SeperableConvBlock(64, 3),  # Output is of size (batchNum,3,32,32)
+            SeparableConvBlock(64, 3),  # Output is of size (batchNum,3,32,32)
             nn.Tanh())
 
     def forward(self, z):
@@ -171,14 +171,14 @@ class Discriminator(nn.Module):
         return self.fc(m.view(-1, w_g * w_g * 512))
 
 
-class SeperableSpectralNormalizedConvBlock(nn.Module):
+class SeparableSpectralNormalizedConvBlock(nn.Module):
     def __init__(self, in_channels, out_channels, kernel, stride):
-        super(SeperableSpectralNormalizedConvBlock, self).__init__()
+        super(SeparableSpectralNormalizedConvBlock, self).__init__()
         self.kernelSize = kernel
         self.stride = stride
         self.depthwise = SpectralNorm(
             nn.Conv2d(in_channels, in_channels, self.kernelSize, stride=self.stride, padding=(1, 1),
-                      groups=in_channels))  # Apply Spectral Norm and each input channel is convolved seperately
+                      groups=in_channels))  # Apply Spectral Norm and each input channel is convolved Separately
         self.pointwise = SpectralNorm(nn.Conv2d(in_channels, out_channels, 1,
                                                 stride=1))  # Apply SpectralNorm and convolution with 1*1*in_channels kernels
 
@@ -186,13 +186,13 @@ class SeperableSpectralNormalizedConvBlock(nn.Module):
         return self.pointwise(self.depthwise(x))
 
 
-class SeperableConvBlock2(nn.Module):
+class SeparableConvBlock2(nn.Module):
     def __init__(self, in_channels, out_channels, kernel, stride):
-        super(SeperableConvBlock2, self).__init__()
+        super(SeparableConvBlock2, self).__init__()
         self.kernelSize = kernel
         self.stride = stride
         self.depthwise = nn.Conv2d(in_channels, in_channels, self.kernelSize, stride=self.stride, padding=(1, 1),
-                                   groups=in_channels)  # Apply Spectral Norm and each input channel is convolved seperately
+                                   groups=in_channels)  # Apply Spectral Norm and each input channel is convolved Separately
         self.pointwise = nn.Conv2d(in_channels, out_channels, 1,
                                    stride=1)  # Apply SpectralNorm and convolution with 1*1*in_channels kernels
 
@@ -200,17 +200,17 @@ class SeperableConvBlock2(nn.Module):
         return self.pointwise(self.depthwise(x))
 
 
-class SeperableDiscriminator(nn.Module):
+class SeparableDiscriminator(nn.Module):
     def __init__(self):
-        super(SeperableDiscriminator, self).__init__()
+        super(SeparableDiscriminator, self).__init__()
 
-        self.conv1 = SeperableConvBlock2(channels, 128, 3, stride=2)
-        self.conv2 = SeperableConvBlock2(128, 192, 3, stride=2)
-        self.conv3 = SeperableConvBlock2(192, 256, 3, stride=2)
-        self.conv4 = SeperableConvBlock2(256, 256, 3, stride=1)
-        self.conv5 = SeperableConvBlock2(256, 512, 3, stride=2)
-        self.conv6 = SeperableConvBlock2(512, 512, 3, stride=1)
-        self.conv7 = SeperableConvBlock2(512, 1024, 3, stride=2)
+        self.conv1 = SeparableConvBlock2(channels, 128, 3, stride=2)
+        self.conv2 = SeparableConvBlock2(128, 192, 3, stride=2)
+        self.conv3 = SeparableConvBlock2(192, 256, 3, stride=2)
+        self.conv4 = SeparableConvBlock2(256, 256, 3, stride=1)
+        self.conv5 = SeparableConvBlock2(256, 512, 3, stride=2)
+        self.conv6 = SeparableConvBlock2(512, 512, 3, stride=1)
+        self.conv7 = SeparableConvBlock2(512, 1024, 3, stride=2)
 
         self.fc1 = nn.Linear(1024, 50)
         self.fc2 = nn.Linear(50, 1)
@@ -229,7 +229,7 @@ class SeperableDiscriminator(nn.Module):
 
 
 '''
-model = SeperableDiscriminator()
+model = SeparableDiscriminator()
 print("model that has been used is = ", model)
 pytorch_total_params = sum(p.numel() for p in model.parameters())
 print("Total params = ", pytorch_total_params)
