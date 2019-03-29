@@ -75,10 +75,11 @@ class Generator2(nn.Module):
 
 
 class SeparableConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, in_channels, out_channels, groups=None):
         super(SeparableConvBlock, self).__init__()
+        groups = groups or in_channels
         self.depthwise = nn.Conv2d(in_channels, in_channels, 3, stride=1, padding=(1, 1),
-                                   groups=in_channels)  # Each input channel is convolved Separately
+                                   groups=groups)  # Each input channel is convolved Separately
         self.pointwise = nn.Conv2d(in_channels, out_channels, 1,
                                    stride=1)  # Normal convolution with 1*1*in_channels kernels
 
@@ -172,8 +173,9 @@ class Discriminator(nn.Module):
 
 
 class SeparableSpectralNormalizedConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel, stride):
+    def __init__(self, in_channels, out_channels, kernel, stride, groups=None):
         super(SeparableSpectralNormalizedConvBlock, self).__init__()
+        groups = groups or in_channels
         self.kernelSize = kernel
         self.stride = stride
         self.depthwise = SpectralNorm(
@@ -187,12 +189,13 @@ class SeparableSpectralNormalizedConvBlock(nn.Module):
 
 
 class SeparableConvBlock2(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel, stride):
+    def __init__(self, in_channels, out_channels, kernel, stride, groups=None):
         super(SeparableConvBlock2, self).__init__()
+        groups = groups or in_channels
         self.kernelSize = kernel
         self.stride = stride
         self.depthwise = nn.Conv2d(in_channels, in_channels, self.kernelSize, stride=self.stride, padding=(1, 1),
-                                   groups=in_channels)  # Apply Spectral Norm and each input channel is convolved Separately
+                                   groups=groups)  # Apply Spectral Norm and each input channel is convolved Separately
         self.pointwise = nn.Conv2d(in_channels, out_channels, 1,
                                    stride=1)  # Apply SpectralNorm and convolution with 1*1*in_channels kernels
 
@@ -204,16 +207,15 @@ class SeparableDiscriminator(nn.Module):
     def __init__(self):
         super(SeparableDiscriminator, self).__init__()
 
-        self.conv1 = SeparableConvBlock2(channels, 128, 3, stride=2)
-        self.conv2 = SeparableConvBlock2(128, 192, 3, stride=2)
-        self.conv3 = SeparableConvBlock2(192, 256, 3, stride=2)
-        self.conv4 = SeparableConvBlock2(256, 256, 3, stride=1)
-        self.conv5 = SeparableConvBlock2(256, 512, 3, stride=2)
-        self.conv6 = SeparableConvBlock2(512, 512, 3, stride=1)
-        self.conv7 = SeparableConvBlock2(512, 1024, 3, stride=2)
+        self.conv1 = SeparableSpectralNormalizedConvBlock(channels, 64, 3, stride=1, groups=1)
+        self.conv2 = SeparableSpectralNormalizedConvBlock(64, 64, 4, stride=2, groups=1)
+        self.conv3 = SeparableSpectralNormalizedConvBlock(64, 128, 3, stride=1, groups=1)
+        self.conv4 = SeparableSpectralNormalizedConvBlock(128, 128, 4, stride=2, groups=1)
+        self.conv5 = SeparableSpectralNormalizedConvBlock(128, 256, 3, stride=1, groups=1)
+        self.conv6 = SeparableSpectralNormalizedConvBlock(256, 256, 4, stride=2, groups=1)
+        self.conv7 = SeparableSpectralNormalizedConvBlock(256, 512, 3, stride=1, groups=1)
 
-        self.fc1 = nn.Linear(1024, 50)
-        self.fc2 = nn.Linear(50, 1)
+        self.fc1 = SpectralNorm(nn.Linear(w_g * w_g * 512, 1))
 
     def forward(self, x):
         m = x
@@ -225,11 +227,11 @@ class SeparableDiscriminator(nn.Module):
         m = nn.LeakyReLU(leak)(self.conv6(m))
         m = nn.LeakyReLU(leak)(self.conv7(m))
 
-        return self.fc2(self.fc1(m.view(-1, 1024)).view(-1, 50))
+        return self.fc1(m.view(-1, w_g * w_g * 512))
 
 
 '''
-model = SeparableDiscriminator()
+model = SeparableGenerator(128)
 print("model that has been used is = ", model)
 pytorch_total_params = sum(p.numel() for p in model.parameters())
 print("Total params = ", pytorch_total_params)

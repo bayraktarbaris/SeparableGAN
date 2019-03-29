@@ -7,12 +7,10 @@ from six.moves import urllib
 from chainer import serializers
 from incep_score_tf import Inception
 
-
 """
 Including code from the official implementation by OpenAI found at
 https://github.com/openai/improved-gan
 """
-
 
 DATA_URL = ('http://download.tensorflow.org/models/image/imagenet/'
             'inception-2015-12-05.tgz')

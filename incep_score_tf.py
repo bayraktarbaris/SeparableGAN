@@ -2,11 +2,12 @@ import math
 import torch
 import torch.utils.data
 import chainer
-from chainer import Chain,serializers,datasets,dataset
+from chainer import Chain, serializers, datasets, dataset
 from chainer import functions as F
 from chainer import links as L
 from chainer import Variable
 import numpy as np
+
 
 def inception_score(model, ims, batch_size=50, splits=10):
     """Compute the inception score for given images.
@@ -49,7 +50,6 @@ def inception_score(model, ims, batch_size=50, splits=10):
             y = model(ims_batch)
         ys[batch_start:batch_end] = y.data
 
-
     # Compute the inception score based on the softmax predictions of the
     # inception module.
     scores = xp.empty((splits), dtype=xp.float32)  # Split inception scores
@@ -88,7 +88,7 @@ class MaxPooling2D(Pooling2D):
 class Mixed(Chain):
 
     def __init__(self, trunk):
-        super(Mixed,self).__init__()
+        super(Mixed, self).__init__()
         for name, link in trunk:
             self.add_link(name, link)
         self.trunk = trunk
@@ -104,7 +104,7 @@ class Mixed(Chain):
 class Tower(Chain):
 
     def __init__(self, trunk):
-        super(Tower,self).__init__()
+        super(Tower, self).__init__()
         for name, link in trunk:
             if not name.startswith('_'):
                 self.add_link(name, link)
@@ -652,6 +652,8 @@ class Inception(Chain):
         # assert h.shape[1:] == (1008,)
 
         return h
+
+
 if __name__ == '__main__':
     """
     class IgnoreLabelDataset(torch.utils.data.Dataset):
@@ -681,12 +683,12 @@ if __name__ == '__main__':
                              ])
     )
     """
-     
-    train = np.array(np.load("cifar-10.npz")['train_x'].reshape((50000,3,32,32)), dtype = np.float32)
-    #IgnoreLabelDataset(cifar)
+
+    train = np.array(np.load("cifar-10.npz")['train_x'].reshape((50000, 3, 32, 32)), dtype=np.float32)
+    # IgnoreLabelDataset(cifar)
     model = Inception()
-    serializers.load_hdf5("model/inception_score.model",model)
+    serializers.load_hdf5("model/inception_score.model", model)
     model.to_gpu()
-    print ("Calculating Inception Score...")
-    #print("inception score mean %s, std %s"%(inception_score(model, np.array(cifar.train_data, dtype = np.float32).reshape((50000,3,32,32)))))
-    print("inception score mean %s, std %s"%(inception_score(model,train )))
+    print("Calculating Inception Score...")
+    # print("inception score mean %s, std %s"%(inception_score(model, np.array(cifar.train_data, dtype = np.float32).reshape((50000,3,32,32)))))
+    print("inception score mean %s, std %s" % (inception_score(model, train)))
