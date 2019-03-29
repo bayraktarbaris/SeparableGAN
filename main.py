@@ -77,6 +77,7 @@ def train(epoch):
 
         if batch_idx % 100 == 0:
             print('disc loss', disc_loss.data, 'gen loss', gen_loss.data)  # Show the loss for each 100 iteration
+        '''
         if batch_idx % 1000 == 0:
             inceptionModel = Inception()
             serializers.load_hdf5("model/inception_score.model", inceptionModel)
@@ -89,6 +90,7 @@ def train(epoch):
                     'best' + str(args.experimentNo))))  # Distinguish the experiments
                 torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, 'gen_{}'.format(
                     'best' + str(args.experimentNo))))  # Distinguish the experiments
+        '''
     scheduler_d.step()
     scheduler_g.step()
 
@@ -199,7 +201,7 @@ else:  # Here we assume cuda is a must for training
         discriminator = model_resnet.Discriminator()
         generator = model_resnet.Generator(Z_dim)
     else:
-        discriminator = model_resnet.Discriminator()
+        discriminator = model.SeparableDiscriminator()
         generator = model.SeparableGenerator2(Z_dim)
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
