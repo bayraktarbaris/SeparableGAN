@@ -180,7 +180,7 @@ class SeparableSpectralNormalizedConvBlock(nn.Module):
         self.stride = stride
         self.depthwise = SpectralNorm(
             nn.Conv2d(in_channels, in_channels, self.kernelSize, stride=self.stride, padding=(1, 1),
-                      groups=in_channels))  # Apply Spectral Norm and each input channel is convolved Separately
+                      groups=groups))  # Apply Spectral Norm and each input channel is convolved Separately
         self.pointwise = SpectralNorm(nn.Conv2d(in_channels, out_channels, 1,
                                                 stride=1))  # Apply SpectralNorm and convolution with 1*1*in_channels kernels
 
@@ -230,11 +230,11 @@ class SeparableDiscriminator(nn.Module):
         return self.fc1(m.view(-1, w_g * w_g * 512))
 
 
-'''
-model = SeparableGenerator(128)
+
+model = SeparableDiscriminator()
 print("model that has been used is = ", model)
 pytorch_total_params = sum(p.numel() for p in model.parameters())
 print("Total params = ", pytorch_total_params)
 pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print("Total trainable params = ", pytorch_total_params)
-'''
+
