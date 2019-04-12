@@ -44,11 +44,11 @@ def train(epoch):
     for batch_idx, (data, target) in enumerate(loader):
         if data.size()[0] != args.batch_size:
             continue
-        data, target = Variable(data), Variable(target)
+        data, target = Variable(data.cuda()), Variable(target.cuda())
 
         # update discriminator
         for _ in range(args.disc_iters):
-            z = Variable(torch.randn(args.batch_size, Z_dim))
+            z = Variable(torch.randn(args.batch_size, Z_dim)).cuda()
             optim_disc.zero_grad()
             optim_gen.zero_grad()
             if args.loss == 'hinge':
@@ -57,13 +57,13 @@ def train(epoch):
             elif args.loss == 'wasserstein':
                 disc_loss = -discriminator(data).mean() + discriminator(generator(z)).mean()
             else:
-                disc_loss = nn.BCEWithLogitsLoss()(discriminator(data), Variable(torch.ones(args.batch_size, 1))) + \
+                disc_loss = nn.BCEWithLogitsLoss()(discriminator(data), Variable(torch.ones(args.batch_size, 1).cuda())) + \
                             nn.BCEWithLogitsLoss()(discriminator(generator(z)),
-                                                   Variable(torch.zeros(args.batch_size, 1)))
+                                                   Variable(torch.zeros(args.batch_size, 1).cuda()))
             disc_loss.backward()
             optim_disc.step()
 
-        z = Variable(torch.randn(args.batch_size, Z_dim))
+        z = Variable(torch.randn(args.batch_size, Z_dim).cuda())
 
         # update generator
         optim_disc.zero_grad()
@@ -71,7 +71,7 @@ def train(epoch):
         if args.loss == 'hinge' or args.loss == 'wasserstein':
             gen_loss = -discriminator(generator(z)).mean()
         else:
-            gen_loss = nn.BCEWithLogitsLoss()(discriminator(generator(z)), Variable(torch.ones(args.batch_size, 1)))
+            gen_loss = nn.BCEWithLogitsLoss()(discriminator(generator(z)), Variable(torch.ones(args.batch_size, 1).cuda()))
         gen_loss.backward()
         optim_gen.step()
 
@@ -122,8 +122,8 @@ def load_pretrained(model_type, cuda_avail):
     print("Loading pretrained models for the experimentNo %s" % args.experimentNo)
     if args.model == "resnet":
         if args.cuda_avail == "True":
-            discriminator = model_resnet.Discriminator()
-            generator = model_resnet.Generator(Z_dim)
+            discriminator = model_resnet.Discriminator().cuda()
+            generator = model_resnet.Generator(Z_dim).cuda()
             discriminator.load_state_dict(torch.load(args.checkpoint_dir + '/disc_best' + str(args.experimentNo),
                                                      map_location=lambda storage, loc: storage))
             generator.load_state_dict(torch.load(args.checkpoint_dir + '/gen_best' + str(args.experimentNo),
@@ -138,8 +138,8 @@ def load_pretrained(model_type, cuda_avail):
 
     else:
         if args.cuda_avail == "True":
-            discriminator = model.Discriminator()
-            generator = model.Generator2(Z_dim)
+            discriminator = model.Discriminator().cuda()
+            generator = model.Generator2(Z_dim).cuda()
             discriminator.load_state_dict(torch.load(args.checkpoint_dir + '/disc_best' + str(args.experimentNo)))
             generator.load_state_dict(torch.load(args.checkpoint_dir + '/gen_best' + str(args.experimentNo)))
         else:
@@ -196,13 +196,13 @@ else:  # Here we assume cuda is a must for training
                          transform=transforms.Compose([
                              transforms.ToTensor(),
                              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])),
-        batch_size=args.batch_size, shuffle=True, num_workers=0, pin_memory=True)
+        batch_size=args.batch_size, shuffle=True, num_workers=1, pin_memory=True)
     if args.model == 'resnet':
-        discriminator = model_resnet.Discriminator()
-        generator = model_resnet.Generator(Z_dim)
+        discriminator = model_resnet.Discriminator().cuda()
+        generator = model_resnet.Generator(Z_dim).cuda()
     else:
-        discriminator = model.SeparableDiscriminator()
-        generator = model.SeparableGenerator2(Z_dim)
+        discriminator = model.SeparableDiscriminator().cuda()
+        generator = model.SeparableGenerator2(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
