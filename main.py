@@ -36,7 +36,7 @@ parser.add_argument('--disc_iters', type=int,
                     default=5)  # This was the initial setup we trained this value should be cross validated
 args = parser.parse_args()
 Z_dim = 128
-fixed_z = Variable(torch.randn(50000, Z_dim))
+fixed_z = Variable(torch.randn(50000, Z_dim)).cuda()
 
 
 def train(epoch):
@@ -77,7 +77,7 @@ def train(epoch):
 
         if batch_idx % 100 == 0:
             print('disc loss', disc_loss.data, 'gen loss', gen_loss.data)  # Show the loss for each 100 iteration
-        '''
+
         if batch_idx % 1000 == 0:
             inceptionModel = Inception()
             serializers.load_hdf5("model/inception_score.model", inceptionModel)
@@ -90,7 +90,7 @@ def train(epoch):
                     'best' + str(args.experimentNo))))  # Distinguish the experiments
                 torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, 'gen_{}'.format(
                     'best' + str(args.experimentNo))))  # Distinguish the experiments
-        '''
+
     scheduler_d.step()
     scheduler_g.step()
 
