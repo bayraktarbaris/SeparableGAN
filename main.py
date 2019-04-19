@@ -48,7 +48,7 @@ def train(epoch):
 
         # update discriminator
         for _ in range(args.disc_iters):
-            z = Variable(torch.randn(args.batch_size, Z_dim)).cuda()
+            z = Variable(torch.randn(args.batch_size, Z_dim).cuda())
             optim_disc.zero_grad()
             optim_gen.zero_grad()
             if args.loss == 'hinge':
@@ -81,6 +81,7 @@ def train(epoch):
         if batch_idx % 1000 == 0:
             inceptionModel = Inception()
             serializers.load_hdf5("model/inception_score.model", inceptionModel)
+            inceptionModel.to_gpu()
             generator.eval()
             incepScore = inceptionScore(generator, inceptionModel)  # Calculate the inception score for each 10 epochs
             generator.train()
@@ -165,6 +166,7 @@ def inceptionScore(generator, inceptionModel):
             fixed_z[i * batchSize:(i + 1) * batchSize]).cpu().detach().numpy()
     samples = np.array(((samples + 1) * 255 / 2.0).astype("uint8"),
                        dtype=np.float32)  # Conversion is important Scale between 0 and 255 generator last layer tanh()
+    inceptionModel.to_gpu()
     print("Calculating Inception Score...")
     mean, std = inception_score(inceptionModel, samples, batch_size=200)
     print("inception score mean %s, std %s" % (mean, std))
@@ -185,6 +187,7 @@ if args.pretrained == "True":
                        dtype=np.float32)  # Conversion is important Scale between 0 and 255
     model = Inception()
     serializers.load_hdf5("model/inception_score.model", model)
+    model.to_gpu()
     print("Calculating Inception Score...")
     # print("inception score mean %s, std %s"%(inception_score(model, np.array(cifar.train_data, dtype = np.float32).reshape((50000,3,32,32)))))
     print("inception score mean %s, std %s" % (inception_score(model, samples, batch_size=200)))
