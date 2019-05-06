@@ -20,6 +20,47 @@ class Interpolate(nn.Module):
         return x
 
 
+class SeparableConvTranspose2d(nn.Module):
+    def __init__(self, in_channels, out_channels, groups=None):
+        super(SeparableConvTranspose2d, self).__init__()
+        x = torch.ones((3, 3))
+        u1 = torch.zeros((6, 3))
+        u1[::2] = x
+        u1 = u1.reshape(1, 1, u1.shape[0], u1.shape[1])
+        self.conv1 = nn.Conv2d(1, 1, (3, 1), padding=(1, 0))
+        res_conv1 = conv1(u1)
+        u2 = torch.zeros((6, 6))
+        u2[::2] = torch.t(res_conv1[0][0])
+        u2 = torch.t(u2).reshape(1, 1, u2.shape[0], u2.shape[1])
+        self.conv2 = nn.Conv2d(1, 1, (1, 3), padding=(0, 1))
+        res_conv2 = conv2(u2)
+
+    def forward(self, x):
+        x = torch.ones((3, 3))
+        u1 = torch.zeros((6, 3))
+        u1[::2] = x
+        u1 = u1.reshape(1, 1, u1.shape[0], u1.shape[1])
+        self.conv1 = nn.Conv2d(1, 1, (3, 1), padding=(1, 0))
+        res_conv1 = self.conv1(u1)
+        u2 = torch.zeros((6, 6))
+        u2[::2] = torch.t(res_conv1[0][0])
+        u2 = torch.t(u2).reshape(1, 1, u2.shape[0], u2.shape[1])
+        self.conv2 = nn.Conv2d(1, 1, (1, 3), padding=(0, 1))
+        res_conv2 = self.conv2(u2)
+        return res_conv2
+
+class SeparableConvBlock(nn.Module):
+    def __init__(self, in_channels, out_channels, groups=None):
+        super(SeparableConvBlock, self).__init__()
+        groups = groups or in_channels
+        self.depthwise = nn.Conv2d(in_channels, in_channels, 3, stride=1, padding=(1, 1),
+                                   groups=groups)  # Each input channel is convolved Separately
+        self.pointwise = nn.Conv2d(in_channels, out_channels, 1,
+                                   stride=1)  # Normal convolution with 1*1*in_channels kernels
+
+    def forward(self, x):
+        return self.pointwise(self.depthwise(x))
+
 class Generator(nn.Module):
     def __init__(self, z_dim):
         super(Generator, self).__init__()
@@ -188,21 +229,6 @@ class SeparableSpectralNormalizedConvBlock(nn.Module):
         return self.pointwise(self.depthwise(x))
 
 
-class SeparableConvBlock2(nn.Module):
-    def __init__(self, in_channels, out_channels, kernel, stride, groups=None):
-        super(SeparableConvBlock2, self).__init__()
-        groups = groups or in_channels
-        self.kernelSize = kernel
-        self.stride = stride
-        self.depthwise = nn.Conv2d(in_channels, in_channels, self.kernelSize, stride=self.stride, padding=(1, 1),
-                                   groups=groups)  # Apply Spectral Norm and each input channel is convolved Separately
-        self.pointwise = nn.Conv2d(in_channels, out_channels, 1,
-                                   stride=1)  # Apply SpectralNorm and convolution with 1*1*in_channels kernels
-
-    def forward(self, x):
-        return self.pointwise(self.depthwise(x))
-
-
 class SeparableDiscriminator(nn.Module):
     def __init__(self):
         super(SeparableDiscriminator, self).__init__()
@@ -230,11 +256,11 @@ class SeparableDiscriminator(nn.Module):
         return self.fc1(m.view(-1, w_g * w_g * 512))
 
 
-
+'''
 model = SeparableDiscriminator()
 print("model that has been used is = ", model)
 pytorch_total_params = sum(p.numel() for p in model.parameters())
 print("Total params = ", pytorch_total_params)
 pytorch_total_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
 print("Total trainable params = ", pytorch_total_params)
-
+'''
