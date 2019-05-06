@@ -49,17 +49,6 @@ class SeparableConvTranspose2d(nn.Module):
         res_conv2 = self.conv2(u2)
         return res_conv2
 
-class SeparableConvBlock(nn.Module):
-    def __init__(self, in_channels, out_channels, groups=None):
-        super(SeparableConvBlock, self).__init__()
-        groups = groups or in_channels
-        self.depthwise = nn.Conv2d(in_channels, in_channels, 3, stride=1, padding=(1, 1),
-                                   groups=groups)  # Each input channel is convolved Separately
-        self.pointwise = nn.Conv2d(in_channels, out_channels, 1,
-                                   stride=1)  # Normal convolution with 1*1*in_channels kernels
-
-    def forward(self, x):
-        return self.pointwise(self.depthwise(x))
 
 class Generator(nn.Module):
     def __init__(self, z_dim):
