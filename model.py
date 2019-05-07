@@ -21,31 +21,19 @@ class Interpolate(nn.Module):
 
 
 class SeparableConvTranspose2d(nn.Module):
-    def __init__(self, in_channels, out_channels, groups=None):
+    def __init__(self, in_channels, out_channels):
         super(SeparableConvTranspose2d, self).__init__()
-        x = torch.ones((3, 3))
-        u1 = torch.zeros((6, 3))
-        u1[::2] = x
-        u1 = u1.reshape(1, 1, u1.shape[0], u1.shape[1])
-        self.conv1 = nn.Conv2d(1, 1, (3, 1), padding=(1, 0))
-        res_conv1 = conv1(u1)
-        u2 = torch.zeros((6, 6))
-        u2[::2] = torch.t(res_conv1[0][0])
-        u2 = torch.t(u2).reshape(1, 1, u2.shape[0], u2.shape[1])
-        self.conv2 = nn.Conv2d(1, 1, (1, 3), padding=(0, 1))
-        res_conv2 = conv2(u2)
+        self.conv1 = nn.Conv2d(1, 1, (in_channels, 1), padding=(1, 0))
+        self.conv2 = nn.Conv2d(1, 1, (1, in_channels), padding=(0, 1))
 
     def forward(self, x):
-        x = torch.ones((3, 3))
-        u1 = torch.zeros((6, 3))
+        u1 = torch.zeros((in_channels * 2, in_channels))
         u1[::2] = x
         u1 = u1.reshape(1, 1, u1.shape[0], u1.shape[1])
-        self.conv1 = nn.Conv2d(1, 1, (3, 1), padding=(1, 0))
         res_conv1 = self.conv1(u1)
-        u2 = torch.zeros((6, 6))
+        u2 = torch.zeros((in_channels * 2, in_channels * 2))
         u2[::2] = torch.t(res_conv1[0][0])
         u2 = torch.t(u2).reshape(1, 1, u2.shape[0], u2.shape[1])
-        self.conv2 = nn.Conv2d(1, 1, (1, 3), padding=(0, 1))
         res_conv2 = self.conv2(u2)
         return res_conv2
 
