@@ -32,7 +32,7 @@ def inception_score(model, ims, batch_size=50, splits=10):
 
     for i in range(n_batches):
 
-        print('Running batch', i + 1, '/', n_batches, '...')
+        print('Running batch {0}/{1}'.format(i + 1, n_batches))
 
         batch_start = (i * batch_size)
         batch_end = min((i + 1) * batch_size, n)

@@ -24,7 +24,7 @@ parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--lr', type=float, default=2e-4)
 parser.add_argument('--loss', type=str, default='hinge')
 parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/Discriminator')  # Explicitly say which experiment you are performing
-parser.add_argument('--model', type=str, default='dcgan')
+parser.add_argument('--model', type=str, default='sngan')
 parser.add_argument('--pretrained', type=str, default="False")
 parser.add_argument('--cuda_avail', type=str, default="True")
 parser.add_argument('--experimentNo', type=int, default=0)  # For different tuning Set this to the next consecutive number that have not previously setted
@@ -33,20 +33,42 @@ args = parser.parse_args()
 Z_dim = 128
 fixed_z = Variable(torch.randn(50000, Z_dim)).cuda()
 
+num_classes = 10
+channels = 3
+width = 32
+batch_size_mult = 10
+
+
+def make_rand_class():
+    rand_class = np.random.randint(num_classes)
+    rand_c_onehot = torch.FloatTensor(args.batch_size, num_classes).cuda()
+    rand_c_onehot.zero_()
+    rand_c_onehot[:, rand_class] = 1
+    return (rand_class, rand_c_onehot)
+
 
 def train(epoch):
     bestInceptionScore = 0
     for batch_idx, (data, target) in enumerate(loader):
-        if data.size()[0] != args.batch_size:
+        if data.size()[0] != args.batch_size * batch_size_mult:
             continue
         data, target = Variable(data.cuda()), Variable(target.cuda())
+
+        # SAGAN
+        rand_class, rand_c_onehot = make_rand_class()
+        samples = data[(target == rand_class).nonzero()].squeeze()
+        bsize = samples.size(0)
+        data_selected = samples.repeat((args.batch_size // bsize + 1, 1, 1, 1, 1)).view(-1, channels, width, width)[ :args.batch_size]
+        # SAGAN
 
         # update discriminator
         for _ in range(args.disc_iters):
             z = Variable(torch.randn(args.batch_size, Z_dim).cuda())
             optim_disc.zero_grad()
             optim_gen.zero_grad()
-            if args.loss == 'hinge':
+            if args.model == 'sagan':
+                disc_loss = (nn.ReLU()(1.0 - discriminator(data_selected, rand_c_onehot))).mean() + (nn.ReLU()(1.0 + discriminator(generator(z, rand_c_onehot[0]), rand_c_onehot))).mean()
+            elif args.loss == 'hinge':
                 disc_loss = nn.ReLU()(1.0 - discriminator(data)).mean() + nn.ReLU()(
                     1.0 + discriminator(generator(z))).mean()
             elif args.loss == 'wasserstein':
@@ -59,11 +81,14 @@ def train(epoch):
             optim_disc.step()
 
         z = Variable(torch.randn(args.batch_size, Z_dim).cuda())
+        rand_class, rand_c_onehot = make_rand_class()
 
         # update generator
         optim_disc.zero_grad()
         optim_gen.zero_grad()
-        if args.loss == 'hinge' or args.loss == 'wasserstein':
+        if args.model == 'sagan':
+            gen_loss = -discriminator(generator(z, rand_c_onehot[0]), rand_c_onehot).mean()
+        elif args.loss == 'hinge' or args.loss == 'wasserstein':
             gen_loss = -discriminator(generator(z)).mean()
         else:
             gen_loss = nn.BCEWithLogitsLoss()(discriminator(generator(z)), Variable(torch.ones(args.batch_size, 1).cuda()))
@@ -71,14 +96,14 @@ def train(epoch):
         optim_gen.step()
 
         if batch_idx % 100 == 0:
-            print('disc loss', disc_loss.data, 'gen loss', gen_loss.data)  # Show the loss for each 100 iteration
+            print('Disc loss: {0}, Gen loss: {1}'.format(disc_loss.data, gen_loss.data))  # Show the loss for each 100 iteration
 
         if batch_idx % 1000 == 0:
             inceptionModel = Inception()
             serializers.load_hdf5("model/inception_score.model", inceptionModel)
             inceptionModel.to_gpu()
             generator.eval()
-            incepScore = inceptionScore(generator, inceptionModel)  # Calculate the inception score for each 10 epochs
+            incepScore = inceptionScore(generator, inceptionModel, rand_c_onehot)  # Calculate the inception score for each 10 epochs
             generator.train()
             if incepScore > bestInceptionScore:  # Save the models as best generator and discriminator
                 bestInceptionScore = incepScore
@@ -150,15 +175,19 @@ def load_pretrained(model_type, cuda_avail):
     return generator, discriminator
 
 
-def inceptionScore(generator, inceptionModel):
+def inceptionScore(generator, inceptionModel, rand_c_onehot=None):
     # This function assumed to be run during training to check the improvement in terms of InceptionScore
     # Therefore it directly assumes cuda is available during training
     batchSize = 100
     totalTrainingSamples = 50000  # By default Cifar-10
     samples = np.zeros((totalTrainingSamples, 3, 32, 32), dtype=np.float32)
     for i in range(totalTrainingSamples // batchSize):  # Get the predictions batch by batch
-        samples[i * batchSize:(i + 1) * batchSize] = generator(
-            fixed_z[i * batchSize:(i + 1) * batchSize]).cpu().detach().numpy()
+        if rand_c_onehot[0].shape[0] > 0:
+            samples[i * batchSize:(i + 1) * batchSize] = generator(
+                fixed_z[i * batchSize:(i + 1) * batchSize], rand_c_onehot[0]).cpu().detach().numpy()
+        else:
+            samples[i * batchSize:(i + 1) * batchSize] = generator(
+                fixed_z[i * batchSize:(i + 1) * batchSize]).cpu().detach().numpy()
     samples = np.array(((samples + 1) * 255 / 2.0).astype("uint8"),
                        dtype=np.float32)  # Conversion is important Scale between 0 and 255 generator last layer tanh()
     inceptionModel.to_gpu()
@@ -194,18 +223,21 @@ else:  # Here we assume cuda is a must for training
                          transform=transforms.Compose([
                              transforms.ToTensor(),
                              transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])),
-        batch_size=args.batch_size, shuffle=True, num_workers=1, pin_memory=True)
+        batch_size=args.batch_size * batch_size_mult, shuffle=True, num_workers=1, pin_memory=True)
     if args.model == 'resnet':
         discriminator = model_resnet.Discriminator().cuda()
         generator = model_resnet.Generator(Z_dim).cuda()
-    else:
+    elif args.model == 'sngan':
         discriminator = model.SeparableDiscriminator().cuda()
         generator = model.SeparableGenerator2(Z_dim).cuda()
+    elif args.model == 'sagan':
+        discriminator = model.SADiscriminator().cuda()
+        generator = model.SAGenerator(Z_dim).cuda()
 
     # because the spectral normalization module creates parameters that don't require gradients (u and v), we don't want to 
     # optimize these using sgd. We only let the optimizer operate on parameters that _do_ require gradients
     optim_disc = optim.Adam(filter(lambda p: p.requires_grad, discriminator.parameters()), lr=args.lr, betas=(0.0, 0.9))
-    optim_gen = optim.Adam(generator.parameters(), lr=args.lr, betas=(0.0, 0.9))
+    optim_gen = optim.Adam(generator.parameters(), lr=1e-4, betas=(0.0, 0.9))
 
     # use an exponentially decaying learning rate
     scheduler_d = optim.lr_scheduler.ExponentialLR(optim_disc, gamma=0.99)
