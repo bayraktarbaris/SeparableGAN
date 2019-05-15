@@ -6,8 +6,7 @@ import torch.optim as optim
 from torch.optim.lr_scheduler import ExponentialLR
 from torchvision import datasets, transforms
 from torch.autograd import Variable
-import model
-import model_resnet
+import model, model_resnet
 from incep_score_tf import inception_score, Inception
 import numpy as np
 import matplotlib
@@ -24,16 +23,12 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--batch_size', type=int, default=100)
 parser.add_argument('--lr', type=float, default=2e-4)
 parser.add_argument('--loss', type=str, default='hinge')
-parser.add_argument('--checkpoint_dir', type=str,
-                    default='checkpoints/Discriminator')  # Explicitly say which experiment you are performing
-
+parser.add_argument('--checkpoint_dir', type=str, default='checkpoints/Discriminator')  # Explicitly say which experiment you are performing
 parser.add_argument('--model', type=str, default='dcgan')
 parser.add_argument('--pretrained', type=str, default="False")
 parser.add_argument('--cuda_avail', type=str, default="True")
-parser.add_argument('--experimentNo', type=int,
-                    default=0)  # For different tuning Set this to the next consecutive number that have not previously setted
-parser.add_argument('--disc_iters', type=int,
-                    default=5)  # This was the initial setup we trained this value should be cross validated
+parser.add_argument('--experimentNo', type=int, default=0)  # For different tuning Set this to the next consecutive number that have not previously setted
+parser.add_argument('--disc_iters', type=int, default=5)  # This was the initial setup we trained this value should be cross validated
 args = parser.parse_args()
 Z_dim = 128
 fixed_z = Variable(torch.randn(50000, Z_dim)).cuda()

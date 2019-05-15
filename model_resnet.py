@@ -5,6 +5,8 @@ from spectral_normalization import SpectralNorm
 import numpy as np
 
 channels = 3
+GEN_SIZE = 128
+DISC_SIZE = 128
 
 
 class ResBlockGenerator(nn.Module):
@@ -207,10 +209,6 @@ class SeparableFirstResBlockDiscriminator(nn.Module):
 
     def forward(self, x):
         return self.model(x) + self.bypass(x)
-
-
-GEN_SIZE = 128
-DISC_SIZE = 128
 
 
 class Generator(nn.Module):

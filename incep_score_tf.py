@@ -55,8 +55,7 @@ def inception_score(model, ims, batch_size=50, splits=10):
     scores = xp.empty((splits), dtype=xp.float32)  # Split inception scores
     for i in range(splits):
         part = ys[(i * n // splits):((i + 1) * n // splits), :]
-        kl = part * (xp.log(part) -
-                     xp.log(xp.expand_dims(xp.mean(part, 0), 0)))
+        kl = part * (xp.log(part) - xp.log(xp.expand_dims(xp.mean(part, 0), 0)))
         kl = xp.mean(xp.sum(kl, 1))
         scores[i] = xp.exp(kl)
 
@@ -655,7 +654,6 @@ class Inception(Chain):
 
 
 if __name__ == '__main__':
-    """
     class IgnoreLabelDataset(torch.utils.data.Dataset):
         def __init__(self, orig):
             self.orig = orig
@@ -663,32 +661,32 @@ if __name__ == '__main__':
         def __getitem__(self, index):
             return self.orig[index][0]
 
-        def __getNumberOfItems__(self, howMany,startIndex):
-            data = torch.zeros([howMany,3,32,32], dtype = torch.float32)
+        def __getNumberOfItems__(self, howMany, startIndex):
+            data = torch.zeros([howMany, 3, 32, 32], dtype=torch.float32)
             for i in range(howMany):
-                data[i] = self.__getitem__(i+startIndex)
+                data[i] = self.__getitem__(i + startIndex)
             return data
 
         def __len__(self):
             return len(self.orig)
 
+
     import torchvision.datasets as dset
     import torchvision.transforms as transforms
 
     cifar = dset.CIFAR10(root='/slow_data/datasets/cifar-10-python', download=False,
-                             transform=transforms.Compose([
-                                 transforms.Scale(32),
-                                 transforms.ToTensor(),
-                                 transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-                             ])
-    )
-    """
+                         transform=transforms.Compose([
+                             transforms.Scale(32),
+                             transforms.ToTensor(),
+                             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                         ])
+                         )
 
-    train = np.array(np.load("cifar-10.npz")['train_x'].reshape((50000, 3, 32, 32)), dtype=np.float32)
+    # train = np.array(np.load("cifar-10.npz")['train_x'].reshape((50000, 3, 32, 32)), dtype=np.float32)
     # IgnoreLabelDataset(cifar)
     model = Inception()
     serializers.load_hdf5("model/inception_score.model", model)
     model.to_gpu()
     print("Calculating Inception Score...")
-    # print("inception score mean %s, std %s"%(inception_score(model, np.array(cifar.train_data, dtype = np.float32).reshape((50000,3,32,32)))))
-    print("inception score mean %s, std %s" % (inception_score(model, train)))
+    print("inception score mean %s, std %s" % (inception_score(model, np.array(cifar.data, dtype=np.float32).reshape((50000, 3, 32, 32)))))
+    # print("inception score mean %s, std %s" % (inception_score(model, train)))

@@ -2,10 +2,13 @@ from torch import nn
 import torch.nn.functional as F
 
 from spectral_normalization import SpectralNorm
+from conditional_batch_norm import ConditionalBatchNorm2d
+from self_attention import SelfAttentionPost, SelfAttention
 
 channels = 3
 leak = 0.1
 w_g = 4
+num_classes = 10
 
 
 class Interpolate(nn.Module):
@@ -202,10 +205,8 @@ class SeparableSpectralNormalizedConvBlock(nn.Module):
         self.kernelSize = kernel
         self.stride = stride
         self.depthwise = SpectralNorm(
-            nn.Conv2d(in_channels, in_channels, self.kernelSize, stride=self.stride, padding=(1, 1),
-                      groups=groups))  # Apply Spectral Norm and each input channel is convolved Separately
-        self.pointwise = SpectralNorm(nn.Conv2d(in_channels, out_channels, 1,
-                                                stride=1))  # Apply SpectralNorm and convolution with 1*1*in_channels kernels
+            nn.Conv2d(in_channels, in_channels, self.kernelSize, stride=self.stride, padding=(1, 1), groups=groups))  # Apply Spectral Norm and each input channel is convolved Separately
+        self.pointwise = SpectralNorm(nn.Conv2d(in_channels, out_channels, 1, stride=1))  # Apply SpectralNorm and convolution with 1*1*in_channels kernels
 
     def forward(self, x):
         return self.pointwise(self.depthwise(x))
@@ -236,6 +237,82 @@ class SeparableDiscriminator(nn.Module):
         m = nn.LeakyReLU(leak)(self.conv7(m))
 
         return self.fc1(m.view(-1, w_g * w_g * 512))
+
+
+class SAGenerator(nn.Module):
+    def __init__(self, z_dim):
+        super(SAGenerator, self).__init__()
+        self.z_dim = z_dim
+
+        self.conv1 = SpectralNorm(nn.ConvTranspose2d(z_dim, 512, 4, stride=1))
+        self.bn1 = ConditionalBatchNorm2d(512, num_classes)
+        self.conv2 = SpectralNorm(nn.ConvTranspose2d(512, 256, 4, stride=2, padding=(1, 1)))
+        self.bn2 = ConditionalBatchNorm2d(256, num_classes)
+        self.conv3 = SpectralNorm(nn.ConvTranspose2d(256, 128, 4, stride=2, padding=(1, 1)))
+        self.bn3 = ConditionalBatchNorm2d(128, num_classes)
+        self.conv4 = SpectralNorm(nn.ConvTranspose2d(128, 64, 4, stride=2, padding=(1, 1)))
+        self.bn4 = ConditionalBatchNorm2d(64, num_classes)
+        self.conv5 = SpectralNorm(nn.ConvTranspose2d(64, channels, 3, stride=1, padding=(1, 1)))
+
+    def forward(self, z, label):
+        x = z.view(-1, self.z_dim, 1, 1)
+        x = self.conv1(x)
+        x = self.bn1(x, label)
+        x = nn.ReLU()(x)
+        x = self.conv2(x)
+        x = self.bn2(x, label)
+        x = nn.ReLU()(x)
+        x = self.conv3(x)
+        x = self.bn3(x, label)
+        x = nn.ReLU()(x)
+        x = self.conv4(x)
+        x = self.bn4(x, label)
+        x = nn.ReLU()(x)
+        x = self.conv5(x)
+        x = nn.Tanh()(x)
+
+        return x
+
+
+class SADiscriminator(nn.Module):
+    def __init__(self):
+        super(SADiscriminator, self).__init__()
+
+        self.conv1 = SpectralNorm(nn.Conv2d(channels, 64, 3, stride=1, padding=(1, 1)))
+
+        self.conv2 = SpectralNorm(nn.Conv2d(64, 64, 4, stride=2, padding=(1, 1)))
+        self.conv3 = SpectralNorm(nn.Conv2d(64, 128, 3, stride=1, padding=(1, 1)))
+        self.conv4 = SpectralNorm(nn.Conv2d(128, 128, 4, stride=2, padding=(1, 1)))
+
+        self.attention_size = 16
+        self.att = SelfAttention(128, self.attention_size)
+        self.att_post = SelfAttentionPost(128, self.attention_size)
+
+        self.conv5 = SpectralNorm(nn.Conv2d(128, 256, 3, stride=1, padding=(1, 1)))
+        self.conv6 = SpectralNorm(nn.Conv2d(256, 256, 4, stride=2, padding=(1, 1)))
+        self.conv7 = SpectralNorm(nn.Conv2d(256, 512, 3, stride=1, padding=(1, 1)))
+
+        self.embed = SpectralNorm(nn.Linear(num_classes, w_g * w_g * 512))
+
+        self.fc = SpectralNorm(nn.Linear(w_g * w_g * 512, 1))
+
+    def forward(self, x, c):
+        m = x
+        m = nn.LeakyReLU(leak)(self.conv1(m))
+        m = nn.LeakyReLU(leak)(self.conv2(m))
+        m = nn.LeakyReLU(leak)(self.conv3(m))
+        m = nn.LeakyReLU(leak)(self.conv4(m))
+
+        self.attention_output = self.att(m)
+
+        m = self.att_post(m, self.attention_output)
+
+        m = nn.LeakyReLU(leak)(self.conv5(m))
+        m = nn.LeakyReLU(leak)(self.conv6(m))
+        m = nn.LeakyReLU(leak)(self.conv7(m))
+        m = m.view(-1, w_g * w_g * 512)
+
+        return self.fc(m) + torch.bmm(m.view(-1, 1, w_g * w_g * 512), self.embed(c).view(-1, w_g * w_g * 512, 1))
 
 
 '''
