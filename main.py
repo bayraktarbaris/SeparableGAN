@@ -182,7 +182,7 @@ def inceptionScore(generator, inceptionModel, rand_c_onehot=None):
     totalTrainingSamples = 50000  # By default Cifar-10
     samples = np.zeros((totalTrainingSamples, 3, 32, 32), dtype=np.float32)
     for i in range(totalTrainingSamples // batchSize):  # Get the predictions batch by batch
-        if rand_c_onehot[0].shape[0] > 0:
+        if args.model == 'sagan':
             samples[i * batchSize:(i + 1) * batchSize] = generator(
                 fixed_z[i * batchSize:(i + 1) * batchSize], rand_c_onehot[0]).cpu().detach().numpy()
         else:
