@@ -34,17 +34,42 @@ class SeparableConvTranspose2d(nn.Module):
         self.conv2 = nn.Conv2d(mid_channels, out_channels, (1, kernel_size), stride=1, padding=(0, 1))
 
     def forward(self, x):
-        u1 = torch.zeros((x.shape[0] * 2, x.shape[1]))
-        u1[::2] = x
-        u1 = u1.reshape(1, 1, u1.shape[0], u1.shape[1])
+        # print('x.shape:', x.shape)
+        u1 = torch.zeros((x.shape[0], x.shape[1], x.shape[2] * 2, x.shape[3])).cuda()
+        u1[:, :, ::2] = x
         res_conv1 = self.conv1(u1)
 
-        u2 = torch.zeros((1, self.mid_channels, x.shape[0] * 2, x.shape[1] * 2))
+        u2 = torch.zeros((100, self.mid_channels, x.shape[2] * 2, x.shape[3] * 2)).cuda()
         u2[:, :, ::2] = res_conv1.permute(0, 1, 3, 2)
-        u2 = u2.permute(0, 1, 3, 2).reshape(1, self.mid_channels, u2.shape[2], u2.shape[3])
+        u2 = u2.permute(0, 1, 3, 2).reshape(100, self.mid_channels, u2.shape[2], u2.shape[3])
         res_conv2 = self.conv2(u2)
-
+        # print('res_conv2.shape:', res_conv2.shape)
         return res_conv2
+
+
+class TSepConvGenerator(nn.Module):
+    def __init__(self, z_dim):
+        super(TSepConvGenerator, self).__init__()
+        self.z_dim = z_dim
+
+        self.model = nn.Sequential(
+            SeparableConvTranspose2d(z_dim, z_dim, 512, 3),  # nn.ConvTranspose2d(z_dim, 512, 4, stride=1),
+            nn.BatchNorm2d(512),
+            nn.ReLU(),
+            SeparableConvTranspose2d(512, 512, 256, 3),  # nn.ConvTranspose2d(512, 256, 4, stride=2, padding=(1, 1)),
+            nn.BatchNorm2d(256),
+            nn.ReLU(),
+            SeparableConvTranspose2d(256, 256, 128, 3),  # nn.ConvTranspose2d(256, 128, 4, stride=2, padding=(1, 1)),
+            nn.BatchNorm2d(128),
+            nn.ReLU(),
+            SeparableConvTranspose2d(128, 128, 64, 3),  # nn.ConvTranspose2d(128, 64, 4, stride=2, padding=(1, 1)),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            SeparableConvTranspose2d(64, 64, channels, 3),  # nn.ConvTranspose2d(64, channels, 3, stride=1, padding=(1, 1)),
+            nn.Tanh())
+
+    def forward(self, z):
+        return self.model(z.view(-1, self.z_dim, 1, 1))
 
 
 class Generator(nn.Module):

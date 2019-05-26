@@ -234,7 +234,7 @@ else:  # Here we assume cuda is a must for training
         generator = model_resnet.Generator(Z_dim).cuda()
     elif args.model == 'sngan':
         discriminator = model.SeparableDiscriminator().cuda()
-        generator = model.SeparableGenerator2(Z_dim).cuda()
+        generator = model.TSepConvGenerator(Z_dim).cuda()
     elif args.model == 'sagan':
         discriminator = model.SADiscriminator().cuda()
         generator = model.SAGenerator(Z_dim).cuda()
