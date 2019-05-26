@@ -25,8 +25,9 @@ class Interpolate(nn.Module):
 
 
 class SeparableConvTranspose2d(nn.Module):
-    def __init__(self, in_channels, mid_channels, out_channels, kernel_size):
+    def __init__(self, in_channels, mid_channels, out_channels, kernel_size, batch_size):
         super(SeparableConvTranspose2d, self).__init__()
+        self.batch_size = batch_size
         self.in_channels = in_channels
         self.mid_channels = mid_channels
         self.out_channels = out_channels
@@ -39,33 +40,34 @@ class SeparableConvTranspose2d(nn.Module):
         u1[:, :, ::2] = x
         res_conv1 = self.conv1(u1)
 
-        u2 = torch.zeros((100, self.mid_channels, x.shape[2] * 2, x.shape[3] * 2)).cuda()
+        u2 = torch.zeros((self.batch_size, self.mid_channels, x.shape[2] * 2, x.shape[3] * 2)).cuda()
         u2[:, :, ::2] = res_conv1.permute(0, 1, 3, 2)
-        u2 = u2.permute(0, 1, 3, 2).reshape(100, self.mid_channels, u2.shape[2], u2.shape[3])
+        u2 = u2.permute(0, 1, 3, 2).reshape(self.batch_size, self.mid_channels, u2.shape[2], u2.shape[3])
         res_conv2 = self.conv2(u2)
         # print('res_conv2.shape:', res_conv2.shape)
         return res_conv2
 
 
 class TSepConvGenerator(nn.Module):
-    def __init__(self, z_dim):
+    def __init__(self, z_dim, batch_size):
         super(TSepConvGenerator, self).__init__()
         self.z_dim = z_dim
+        self.batch_size = batch_size
 
         self.model = nn.Sequential(
-            SeparableConvTranspose2d(z_dim, z_dim, 512, 3),  # nn.ConvTranspose2d(z_dim, 512, 4, stride=1),
+            SeparableConvTranspose2d(z_dim, z_dim, 512, 3, self.batch_size),  # nn.ConvTranspose2d(z_dim, 512, 4, stride=1),
             nn.BatchNorm2d(512),
             nn.ReLU(),
-            SeparableConvTranspose2d(512, 512, 256, 3),  # nn.ConvTranspose2d(512, 256, 4, stride=2, padding=(1, 1)),
+            SeparableConvTranspose2d(512, 512, 256, 3, self.batch_size),  # nn.ConvTranspose2d(512, 256, 4, stride=2, padding=(1, 1)),
             nn.BatchNorm2d(256),
             nn.ReLU(),
-            SeparableConvTranspose2d(256, 256, 128, 3),  # nn.ConvTranspose2d(256, 128, 4, stride=2, padding=(1, 1)),
+            SeparableConvTranspose2d(256, 256, 128, 3, self.batch_size),  # nn.ConvTranspose2d(256, 128, 4, stride=2, padding=(1, 1)),
             nn.BatchNorm2d(128),
             nn.ReLU(),
-            SeparableConvTranspose2d(128, 128, 64, 3),  # nn.ConvTranspose2d(128, 64, 4, stride=2, padding=(1, 1)),
+            SeparableConvTranspose2d(128, 128, 64, 3, self.batch_size),  # nn.ConvTranspose2d(128, 64, 4, stride=2, padding=(1, 1)),
             nn.BatchNorm2d(64),
             nn.ReLU(),
-            SeparableConvTranspose2d(64, 64, channels, 3),  # nn.ConvTranspose2d(64, channels, 3, stride=1, padding=(1, 1)),
+            SeparableConvTranspose2d(64, 64, channels, 3, self.batch_size),  # nn.ConvTranspose2d(64, channels, 3, stride=1, padding=(1, 1)),
             nn.Tanh())
 
     def forward(self, z):
