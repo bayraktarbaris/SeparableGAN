@@ -143,6 +143,34 @@ def evaluate(epoch, rand_c_onehot):
     plt.close(fig)
 
 
+def evaluate_sagan(epoch):
+
+    for fixed_class in range(num_classes):
+
+        fixed_c_onehot = torch.FloatTensor(args.batch_size, num_classes).cuda()
+        fixed_c_onehot.zero_()
+        fixed_c_onehot[:, fixed_class] = 1
+
+        samples = generator(fixed_z, fixed_c_onehot[0]).expand(-1, 3, -1, -1).cpu().detach().numpy()[:64]
+        fig = plt.figure(figsize=(8, 8))
+        gs = gridspec.GridSpec(8, 8)
+        gs.update(wspace=0.05, hspace=0.05)
+
+        for i, sample in enumerate(samples):
+            ax = plt.subplot(gs[i])
+            plt.axis('off')
+            ax.set_xticklabels([])
+            ax.set_yticklabels([])
+            ax.set_aspect('equal')
+            plt.imshow(sample.transpose((1,2,0)) * 0.5 + 0.5)
+
+        if not os.path.exists('out/'):
+            os.makedirs('out/')
+
+        plt.savefig('out/{}_{}.png'.format(str(epoch).zfill(3),str(fixed_class).zfill(2)), bbox_inches='tight')
+        plt.close(fig)
+
+
 def load_pretrained(model_type, cuda_avail):
     # This function loads the previously trained generator and discriminator for a given experimentNo
     print("Loading pretrained models for the experimentNo %s" % args.experimentNo)
@@ -257,4 +285,4 @@ else:  # Here we assume cuda is a must for training
     for epoch in range(2000):
         print("Training epoch %s" % epoch)
         rand_c_onehot = train(epoch)
-        # evaluate(epoch, rand_c_onehot)
+        evaluate_sagan(epoch)
