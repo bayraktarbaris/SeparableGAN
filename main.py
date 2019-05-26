@@ -97,7 +97,7 @@ def train(epoch):
 
         if batch_idx % 100 == 0:
             print('Disc loss: {0}, Gen loss: {1}'.format(disc_loss.data, gen_loss.data))  # Show the loss for each 100 iteration
-
+        '''
         if batch_idx % 1000 == 0:
             inceptionModel = Inception()
             serializers.load_hdf5("model/inception_score.model", inceptionModel)
@@ -111,13 +111,15 @@ def train(epoch):
                     'best' + str(args.experimentNo))))  # Distinguish the experiments
                 torch.save(generator.state_dict(), os.path.join(args.checkpoint_dir, 'gen_{}'.format(
                     'best' + str(args.experimentNo))))  # Distinguish the experiments
-
+        '''
     scheduler_d.step()
     scheduler_g.step()
 
+    return rand_c_onehot
 
-def evaluate(epoch):
-    samples = generator(fixed_z).cpu().data.numpy()[:64]
+
+def evaluate(epoch, rand_c_onehot):
+    samples = generator(fixed_z, rand_c_onehot[0]).cpu().data.numpy()[:64]
 
     fig = plt.figure(figsize=(8, 8))
     gs = gridspec.GridSpec(8, 8)
@@ -251,4 +253,5 @@ else:  # Here we assume cuda is a must for training
 
     for epoch in range(2000):
         print("Training epoch %s" % epoch)
-        train(epoch)
+        rand_c_onehot = train(epoch)
+        evaluate(epoch, rand_c_onehot)
