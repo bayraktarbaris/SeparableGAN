@@ -103,7 +103,10 @@ def train(epoch):
             serializers.load_hdf5("model/inception_score.model", inceptionModel)
             inceptionModel.to_gpu()
             generator.eval()
-            incepScore = inceptionScore(generator, inceptionModel, rand_c_onehot)  # Calculate the inception score for each 10 epochs
+            if args.model == 'sagan':
+                incepScore = inceptionScore(generator, inceptionModel, rand_c_onehot)  # Calculate the inception score for each 10 epochs
+            else:
+                incepScore = inceptionScore(generator, inceptionModel)  # Calculate the inception score for each 10 epochs
             generator.train()
             if incepScore > bestInceptionScore:  # Save the models as best generator and discriminator
                 bestInceptionScore = incepScore
@@ -119,7 +122,7 @@ def train(epoch):
 
 
 def evaluate(epoch, rand_c_onehot):
-    samples = generator(fixed_z, rand_c_onehot[0]).cpu().data.numpy()[:64]
+    samples = generator(fixed_z).cpu().data.numpy()[:64]
 
     fig = plt.figure(figsize=(8, 8))
     gs = gridspec.GridSpec(8, 8)
@@ -254,4 +257,4 @@ else:  # Here we assume cuda is a must for training
     for epoch in range(2000):
         print("Training epoch %s" % epoch)
         rand_c_onehot = train(epoch)
-        evaluate(epoch, rand_c_onehot)
+        # evaluate(epoch, rand_c_onehot)
